@@ -9,6 +9,7 @@ import (
   "github.com/jaekwon.park/petstore-go/models/common/v1.a1/response"
   "github.com/jaekwon.park/petstore-go/models/petstore/v1.a1/defaultapi"
   "go.mongodb.org/mongo-driver/bson"
+  "github.com/google/uuid"
   "log"
   "net/http"
   "strconv"
@@ -36,47 +37,36 @@ func (s Service) GetPetById(w http.ResponseWriter, r *http.Request) {
   vars := mux.Vars(r)
   sId := vars["petId"]
   id, err := strconv.ParseInt(sId, 10, 64)
+  res := &defaultapi.PetApiResponse{}
+  var iMsgs defaultapi.OneOfPetApiResponseData
   if err != nil {
-    res := &defaultapi.PetApiResponse{}
-    var iMsgs defaultapi.OneOfPetApiResponseData
-    errMsgs := &config.Messages{}
-    errMsg :=  &config.Message{}
     msg := fmt.Sprintf("Can not convert %s to int64", sId)
-    errMsg.Message = &msg
-    errMsgs.MessageList = &[]config.Message{}
-    *errMsgs.MessageList =  append(*errMsgs.MessageList, *errMsg)
-    iMsgs = errMsgs
-    log.Printf(*errMsg.Message)
-
+    iMsgs = addMessage(msg)
+    log.Printf(msg)
     res.Data = &iMsgs
-    metadata := &response.ApiResponseMetadata{}
-    res.Metadata = metadata
-    bRes, err := json.Marshal(res)
-    if err != nil {
-      log.Fatal(err)
-    }
-    defaultResponse(w, http.StatusBadRequest, []byte(bRes))
   } else {
     pet := &defaultapi.Pet{}
-    filter := bson.M{"_id": id}
+    //to get by mongodb document id, use _id, for example, filter := bson.M{"_id": id}
+    filter := bson.M{"id": id}
     err := s.Mc.FindOne(context.TODO(), filter).Decode(&pet)
     if err != nil {
-      log.Fatal(err)
+      iMsgs = addMessage(err.Error())
+      log.Printf(err.Error())
+      res.Data = &iMsgs
+    } else {
+      var iPet defaultapi.OneOfPetApiResponseData
+      iPet = pet
+      res.Data = &iPet
     }
-
-    res := &defaultapi.PetApiResponse{}
-    var iPet defaultapi.OneOfPetApiResponseData
-    iPet = pet
-    res.Data = &iPet
-    metadata := &response.ApiResponseMetadata{}
-    res.Metadata = metadata
-    bRes, err := json.Marshal(res)
-    if err != nil {
-      log.Fatal(err)
-    }
-
-    defaultResponse(w, http.StatusOK, []byte(bRes))
   }
+
+  metadata := &response.ApiResponseMetadata{}
+  res.Metadata = metadata
+  bRes, err := json.Marshal(res)
+  if err != nil {
+    log.Fatal(err)
+  }
+  defaultResponse(w, http.StatusOK, bRes)
 }
 
 func (s Service) UploadFile(w http.ResponseWriter, r *http.Request) {
@@ -84,11 +74,56 @@ func (s Service) UploadFile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s Service) AddPet(w http.ResponseWriter, r *http.Request) {
-  defaultResponse(w, http.StatusOK, []byte("{\"Said\":\"Hello\"}"))
+  oneDoc := &defaultapi.Pet{}
+  err := json.NewDecoder(r.Body).Decode(&oneDoc)
+  res := &defaultapi.PetApiResponse{}
+  var iMsgs defaultapi.OneOfPetApiResponseData
+  if err != nil {
+    iMsgs = addMessage(err.Error())
+    log.Printf(err.Error())
+    res.Data = &iMsgs
+  } else {
+    var iPet defaultapi.OneOfPetApiResponseData
+    _, err := create(oneDoc, s.Mc)
+    if err != nil {
+      iMsgs = addMessage(err.Error())
+      log.Printf(err.Error())
+      res.Data = &iMsgs
+    } else {
+      iPet = oneDoc
+      res.Data = &iPet
+    }
+  }
+
+  metadata := &response.ApiResponseMetadata{}
+  res.Metadata = metadata
+  bRes, err := json.Marshal(res)
+  if err != nil {
+    log.Fatal(err)
+  }
+  defaultResponse(w, http.StatusOK, bRes)
+}
+
+func create(p *defaultapi.Pet, mc *mongo.Collection) (*mongo.InsertOneResult, error) {
+  uuid := uuid.New()
+  val := int64(uuid.ID())
+  p.Id = &val
+  return mc.InsertOne(context.TODO(), p)
 }
 
 func defaultResponse(w http.ResponseWriter, code int, resp []byte) {
   w.Header().Set("Content-Type", "application/json")
   w.WriteHeader(code)
   w.Write(resp)
+}
+
+func addMessage(msg string) *config.Messages {
+  errMsgs := &config.Messages{}
+  errMsg :=  &config.Message{}
+  //msg := fmt.Sprintf("Can not convert %s to int64", sId)
+  errMsg.Message = &msg
+  errMsgs.MessageList = &[]config.Message{}
+  *errMsgs.MessageList =  append(*errMsgs.MessageList, *errMsg)
+
+  return errMsgs
 }
