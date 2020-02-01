@@ -38,6 +38,7 @@ func (s Service) GetPetById(w http.ResponseWriter, r *http.Request) {
   sId := vars["petId"]
   id, err := strconv.ParseInt(sId, 10, 64)
   res := &defaultapi.PetApiResponse{}
+  res.Data = &defaultapi.OneOfPetApiResponseData{}
   Msgs := config.Messages{}
   Msg := config.Message{}
   if err != nil {

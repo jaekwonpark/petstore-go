@@ -62,7 +62,7 @@ type Pet struct {
 }
 
 type PetApiResponse struct {
-        Data OneOfPetApiResponseData `json:"data,omitempty"`
+        Data *OneOfPetApiResponseData `json:"data,omitempty"`
         Metadata *import2.ApiResponseMetadata `json:"metadata,omitempty"`
 }
 
