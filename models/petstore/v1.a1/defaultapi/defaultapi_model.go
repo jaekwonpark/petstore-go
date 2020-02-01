@@ -8,7 +8,10 @@
  */
 package defaultapi
 import (
-    import1 "github.com/jaekwon.park/petstore-go/models/common/v1.a1/response"
+  "errors"
+  "fmt"
+  import1 "github.com/jaekwon.park/petstore-go/models/common/v1.a1/config"
+        import2 "github.com/jaekwon.park/petstore-go/models/common/v1.a1/response"
 )
 
 type Category struct {
@@ -17,7 +20,35 @@ type Category struct {
 }
 
 type IntVal struct {
-        IntVal *int32 `json:"int_val,omitempty"`
+        Val *int32 `json:"int_val,omitempty"`
+}
+
+type StrVal struct {
+        Val *string `json:"str_val,omitempty"`
+}
+
+type BoolVal struct {
+        Val *bool `json:"bool_val,omitempty"`
+}
+
+type OneofIntValStrValBoolVal struct {
+  I IntVal
+  S StrVal
+  B BoolVal
+}
+
+func (o *OneofIntValStrValBoolVal) SetValue(v interface{}) error {
+       switch v.(type) {
+       case IntVal:
+               o.I = v.(IntVal)
+       case StrVal:
+               o.S = v.(StrVal)
+       case BoolVal:
+               o.B = v.(BoolVal)
+       default:
+         return errors.New(fmt.Sprintf("%T(%v) is not expected type", v,v))
+       }
+       return nil
 }
 
 type Pet struct {
@@ -31,8 +62,8 @@ type Pet struct {
 }
 
 type PetApiResponse struct {
-        Data *OneOfPetApiResponseData `json:"data,omitempty"`
-        Metadata *import1.ApiResponseMetadata `json:"metadata,omitempty"`
+        Data OneOfPetApiResponseData `json:"data,omitempty"`
+        Metadata *import2.ApiResponseMetadata `json:"metadata,omitempty"`
 }
 
 type Point struct {
@@ -40,9 +71,6 @@ type Point struct {
         Value *OneOfPetstoreV1A1DefaultapiPointValue `json:"value,omitempty"`
 }
 
-type StrVal struct {
-        StrVal *string `json:"str_val,omitempty"`
-}
 
 type Tag struct {
         Id *int64 `json:"id,omitempty"`
@@ -55,7 +83,7 @@ type Url struct {
 
 type UrlApiResponse struct {
         Data *OneOfPetstoreV1A1DefaultapiUrlApiResponseData `json:"data,omitempty"`
-        Metadata *import1.ApiResponseMetadata `json:"metadata,omitempty"`
+        Metadata *import2.ApiResponseMetadata `json:"metadata,omitempty"`
 }
 
 type OneOfPetstoreV1A1DefaultapiPointValue interface {
@@ -71,11 +99,34 @@ type OneOfPetstoreV1A1DefaultapiUrlApiResponseData interface {
 func (*Url) OneOfPetstoreV1A1DefaultapiUrlApiResponseData() {}
 
 
-type OneOfPetApiResponseData interface {
-    OneOfPetApiResponseData()
+type OneOfPetApiResponseData struct {
+  Messages *import1.Messages
+  Pet *Pet
 }
-func (*Pet) OneOfPetApiResponseData() {}
 
+func (o *OneOfPetApiResponseData) SetValue (v interface {}) error {
+  switch v.(type) {
+  case Pet:
+    if nil == o.Pet {
+      o.Pet = new(Pet)
+    }
+    *o.Pet = v.(Pet)
+  case import1.Messages:
+    if nil == o.Messages {
+      o.Messages = new(import1.Messages)
+    }
+    *o.Messages = v.(import1.Messages)
+  default:
+    return errors.New(fmt.Sprintf("%T(%v) is not expected type", v,v))
+  }
+  return nil
+}
+
+/*type OneOfPetApiResponseData interface {
+  Messages()
+}
+func (*Pet) Messages() {}
+ */
 
 func (*Pet) ApiResponseMetadata() {}
 

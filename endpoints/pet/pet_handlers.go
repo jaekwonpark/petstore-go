@@ -38,28 +38,33 @@ func (s Service) GetPetById(w http.ResponseWriter, r *http.Request) {
   sId := vars["petId"]
   id, err := strconv.ParseInt(sId, 10, 64)
   res := &defaultapi.PetApiResponse{}
-  var iMsgs defaultapi.OneOfPetApiResponseData
+  Msgs := config.Messages{}
+  Msg := config.Message{}
   if err != nil {
     msg := fmt.Sprintf("Can not convert %s to int64", sId)
-    iMsgs = addMessage(msg)
-    log.Printf(msg)
-    res.Data = &iMsgs
+    Msg.Message = &msg
+    Msgs = append(Msgs, Msg)
+    res.Data.SetValue(Msgs)
   } else {
-    pet := &defaultapi.Pet{}
+    pet := defaultapi.Pet{}
     //to get by mongodb document id, use _id, for example, filter := bson.M{"_id": id}
     filter := bson.M{"id": id}
     err := s.Mc.FindOne(context.TODO(), filter).Decode(&pet)
     if err != nil {
-      iMsgs = addMessage(err.Error())
-      log.Printf(err.Error())
-      res.Data = &iMsgs
+      msg := err.Error()
+      Msg.Message = &msg
+      Msgs = append(Msgs, Msg)
+      res.Data.SetValue(Msgs)
     } else {
-      var iPet defaultapi.OneOfPetApiResponseData
-      iPet = pet
-      res.Data = &iPet
+      err := res.Data.SetValue(pet)
+      if nil != err {
+        msg := err.Error()
+        Msg.Message = &msg
+        Msgs = append(Msgs, Msg)
+        res.Data.SetValue(Msgs)
+      }
     }
   }
-
   metadata := &response.ApiResponseMetadata{}
   res.Metadata = metadata
   bRes, err := json.Marshal(res)
@@ -77,21 +82,21 @@ func (s Service) AddPet(w http.ResponseWriter, r *http.Request) {
   oneDoc := &defaultapi.Pet{}
   err := json.NewDecoder(r.Body).Decode(&oneDoc)
   res := &defaultapi.PetApiResponse{}
-  var iMsgs defaultapi.OneOfPetApiResponseData
+  Msgs := &defaultapi.OneOfPetApiResponseData{}
   if err != nil {
-    iMsgs = addMessage(err.Error())
+    Msgs.SetValue(err.Error())
     log.Printf(err.Error())
-    res.Data = &iMsgs
+    res.Data.SetValue(Msgs)
   } else {
-    var iPet defaultapi.OneOfPetApiResponseData
+    pet := &defaultapi.OneOfPetApiResponseData{}
     _, err := create(oneDoc, s.Mc)
     if err != nil {
-      iMsgs = addMessage(err.Error())
+      Msgs.SetValue(err.Error())
       log.Printf(err.Error())
-      res.Data = &iMsgs
+      res.Data.SetValue(Msgs)
     } else {
-      iPet = oneDoc
-      res.Data = &iPet
+      pet.SetValue(oneDoc)
+      res.Data.SetValue(pet)
     }
   }
 
@@ -117,13 +122,3 @@ func defaultResponse(w http.ResponseWriter, code int, resp []byte) {
   w.Write(resp)
 }
 
-func addMessage(msg string) *config.Messages {
-  errMsgs := &config.Messages{}
-  errMsg :=  &config.Message{}
-  //msg := fmt.Sprintf("Can not convert %s to int64", sId)
-  errMsg.Message = &msg
-  errMsgs.MessageList = &[]config.Message{}
-  *errMsgs.MessageList =  append(*errMsgs.MessageList, *errMsg)
-
-  return errMsgs
-}

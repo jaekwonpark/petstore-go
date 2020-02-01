@@ -7,8 +7,9 @@
  *
  */
 package response
+
 import (
-    import2 "github.com/jaekwon.park/petstore-go/models/common/v1.a1/config"
+  import2 "github.com/jaekwon.park/petstore-go/models/common/v1.a1/config"
 )
 
 
@@ -19,6 +20,4 @@ type ApiResponseMetadata struct {
         Messages *[]import2.Message `json:"messages,omitempty"`
 }
 
-
-func (a *ApiResponseMetadata) OneOfPetApiResponseData() {}
 

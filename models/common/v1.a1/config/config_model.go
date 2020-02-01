@@ -106,9 +106,7 @@ type ApiLink struct {
 }
 
 
-type Messages struct {
-        MessageList *[]Message `json:"message_list,omitempty"`
-}
+type Messages []Message
 
 type MetadataAbstractModel struct {
         Reserved_ *string `json:"reserved_,omitempty"`
@@ -121,4 +119,4 @@ type Page struct {
         Page_ *int32 `json:"page_,omitempty"`
 }
 
-func (m *Messages) OneOfPetApiResponseData () {}
+
